@@ -10,21 +10,17 @@ namespace NtpNotDefteri
     {
         static void Main(string[] args)
         {
-            // 1) Data klasörünü ve JSON dosyasını hazırla
+            // 1) Data klasörünü ve JSON dosyalarını hazırla
             Directory.CreateDirectory("Data");
-            var dosyaYolu = Path.Combine("Data", "notlar.json");
+            var notDosya = Path.Combine("Data", "notlar.json");
+            var katDosya = Path.Combine("Data", "kategoriler.json");
 
-            // 2) Servisi başlat ve varsa notları yükle
-            var servis = new JsonDosyaServisi(dosyaYolu);
-            var notlar = servis.Yukle();
+            // 2) Servisleri başlat ve verileri yükle
+            var notServis = new JsonDosyaServisi(notDosya);
+            var kategoriServis = new CategoryDosyaServisi(katDosya);
 
-            // 3) Notlardaki kategorileri tekilleştirerek listeye ekle
-            var kategoriler = new List<Kategori>();
-            foreach (var n in notlar)
-            {
-                if (n.Kategori != null && !kategoriler.Exists(k => k.Id == n.Kategori.Id))
-                    kategoriler.Add(n.Kategori);
-            }
+            var notlar = notServis.Yukle();
+            var kategoriler = kategoriServis.Yukle();
 
             bool cikis = false;
             while (!cikis)
@@ -32,32 +28,41 @@ namespace NtpNotDefteri
                 Console.WriteLine("\n*** NOT DEFTERİ MENÜ ***");
                 Console.WriteLine("1. Yeni Not Oluştur");
                 Console.WriteLine("2. Yeni Kategori Oluştur");
-                Console.WriteLine("3. Notları Listele");
-                Console.WriteLine("4. Not Ara");
-                Console.WriteLine("5. Çıkış");
+                Console.WriteLine("3. Kategorileri Listele");
+                Console.WriteLine("4. Notları Listele");
+                Console.WriteLine("5. Not Ara");
+                Console.WriteLine("6. Çıkış");
                 Console.Write("Seçiminiz: ");
 
                 var secim = Console.ReadLine();
                 switch (secim)
                 {
                     case "1":
-                        // Yeni not oluşturma
+                        // --- Yeni Not ---
                         Console.Write("Başlık: ");
-                        var baslik = Console.ReadLine();
+                        var baslik = Console.ReadLine() ?? "";
 
                         Console.Write("İçerik: ");
-                        var icerik = Console.ReadLine();
+                        var icerik = Console.ReadLine() ?? "";
 
-                        // Kategori seçimi
                         Kategori? secilenKategori = null;
                         if (kategoriler.Count > 0)
                         {
-                            Console.WriteLine("Kategori seç (ID gir ya da boş bırak):");
+                            Console.WriteLine("\nMevcut Kategoriler:");
                             foreach (var k in kategoriler)
                                 Console.WriteLine($"  [{k.Id}] {k.Isim}");
-                            Console.Write("Seçiminiz: ");
-                            if (int.TryParse(Console.ReadLine(), out var secimId))
-                                secilenKategori = kategoriler.Find(k => k.Id == secimId);
+                            Console.Write("Kategori seç (ID girin, yoksa boş bırakın): ");
+                            var katGirdi = Console.ReadLine();
+                            if (int.TryParse(katGirdi, out var katId))
+                            {
+                                secilenKategori = kategoriler.Find(k => k.Id == katId);
+                                if (secilenKategori == null)
+                                    Console.WriteLine("Uyarı: Böyle bir kategori bulunamadı.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Henüz kategori yok; not kategori olmadan kaydedilecek.");
                         }
 
                         var yeniNot = new Not
@@ -69,13 +74,17 @@ namespace NtpNotDefteri
                             Kategori = secilenKategori
                         };
                         notlar.Add(yeniNot);
-                        Console.WriteLine($"[{yeniNot.Id}] \"{yeniNot.Baslik}\" başlıklı not eklendi.");
+
+                        Console.WriteLine($"\n[{yeniNot.Id}] \"{yeniNot.Baslik}\" başlıklı not eklendi." +
+                                          (secilenKategori != null
+                                              ? $" (Kategori: {secilenKategori.Isim})"
+                                              : " (Kategori yok)"));
                         break;
 
                     case "2":
-                        // Yeni kategori oluşturma
+                        // --- Yeni Kategori ---
                         Console.Write("Yeni kategori adı: ");
-                        var kategoriAdi = Console.ReadLine();
+                        var kategoriAdi = Console.ReadLine() ?? "";
                         if (!string.IsNullOrWhiteSpace(kategoriAdi))
                         {
                             var yeniKategori = new Kategori
@@ -84,7 +93,7 @@ namespace NtpNotDefteri
                                 Isim = kategoriAdi
                             };
                             kategoriler.Add(yeniKategori);
-                            Console.WriteLine($"[{yeniKategori.Id}] {yeniKategori.Isim} kategorisi oluşturuldu.");
+                            Console.WriteLine($"\n[{yeniKategori.Id}] {yeniKategori.Isim} kategorisi oluşturuldu.");
                         }
                         else
                         {
@@ -93,27 +102,43 @@ namespace NtpNotDefteri
                         break;
 
                     case "3":
-                        // Notları listele
-                        Console.WriteLine("\n-- Tüm Notlar --");
-                        foreach (var n in notlar)
-                        {
-                            Console.WriteLine($"[{n.Id}] {n.Baslik} ({n.Kategori?.Isim ?? "Kategori yok"}) - {n.OlusturmaTarihi}");
-                        }
+                        // --- Kategorileri Listele ---
+                        Console.WriteLine("\n-- Mevcut Kategoriler --");
+                        if (kategoriler.Count == 0)
+                            Console.WriteLine("Henüz kategori yok.");
+                        else
+                            kategoriler.ForEach(k =>
+                                Console.WriteLine($"[{k.Id}] {k.Isim}")
+                            );
                         break;
 
                     case "4":
-                        // Not ara
-                        Console.Write("Aranacak kelime: ");
-                        var anahtar = Console.ReadLine();
-                        var bulunan = notlar.FindAll(n => n.EslesiyorMu(anahtar ?? ""));
-                        Console.WriteLine($"\n-- '{anahtar}' içeren notlar ({bulunan.Count}) --");
-                        foreach (var n in bulunan)
+                        // --- Notları Listele ---
+                        Console.WriteLine("\n-- Tüm Notlar --");
+                        if (notlar.Count == 0)
                         {
-                            Console.WriteLine($"[{n.Id}] {n.Baslik} ({n.Kategori?.Isim ?? "Kategori yok"})");
+                            Console.WriteLine("Hiç not yok.");
+                        }
+                        else
+                        {
+                            notlar.ForEach(n =>
+                                Console.WriteLine($"[{n.Id}] {n.Baslik} ({n.Kategori?.Isim ?? "Kategori yok"}) - {n.OlusturmaTarihi}")
+                            );
                         }
                         break;
 
                     case "5":
+                        // --- Not Ara ---
+                        Console.Write("Aranacak kelime: ");
+                        var anahtar = Console.ReadLine() ?? "";
+                        var bulunan = notlar.FindAll(n => n.EslesiyorMu(anahtar));
+                        Console.WriteLine($"\n-- '{anahtar}' içeren notlar ({bulunan.Count}) --");
+                        bulunan.ForEach(n =>
+                            Console.WriteLine($"[{n.Id}] {n.Baslik} ({n.Kategori?.Isim ?? "Kategori yok"})")
+                        );
+                        break;
+
+                    case "6":
                         cikis = true;
                         break;
 
@@ -123,9 +148,11 @@ namespace NtpNotDefteri
                 }
             }
 
-            // 4) Çıkarken notları kaydet
-            servis.Kaydet(notlar);
-            Console.WriteLine("Program sonlandırıldı.");
+            // 7) Çıkarken verileri kaydet
+            notServis.Kaydet(notlar);
+            kategoriServis.Kaydet(kategoriler);
+
+            Console.WriteLine("\nProgram sonlandırıldı.");
         }
     }
 }

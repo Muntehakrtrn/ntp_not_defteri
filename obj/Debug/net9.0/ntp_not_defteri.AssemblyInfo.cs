@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ntp_not_defteri")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e07829d9a4ccc2afd776c47fafc4bf14b328f69")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a378737a43a11e7f24d853bededd4c30d3782170")]
 [assembly: System.Reflection.AssemblyProductAttribute("ntp_not_defteri")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ntp_not_defteri")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
